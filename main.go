@@ -19,11 +19,13 @@ type task struct {
 }
 
 var tasks []task
+var nextTaskID int
 
 func main() {
 	tasks = append(tasks, task{1001, "Eat", false})
 	tasks = append(tasks, task{1002, "Sleep", false})
 	tasks = append(tasks, task{1003, "Rave", false})
+	nextTaskID = 1004
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/task", createTask).Methods("POST")
@@ -37,13 +39,16 @@ func main() {
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
-	//curl -d '{"id":1004, "info":"Learn", "done":false}' -H "Content-Type: application/json" -i -X POST http://localhost:8080/task
+	//curl -d '{"info":"Learn", "done":false}' -H "Content-Type: application/json" -i -X POST http://localhost:8080/task
 	var reqTask task
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println(err)
 	}
 	json.Unmarshal(reqBody, &reqTask)
+
+	reqTask.ID = nextTaskID
+	nextTaskID++
 
 	conflict := false
 	for _, task := range tasks {
@@ -57,12 +62,14 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 	} else {
 		tasks = append(tasks, reqTask)
 		w.WriteHeader(http.StatusCreated)
+		fmt.Println("Created")
 	}
 }
 
 func readTasks(w http.ResponseWriter, r *http.Request) {
 	//curl -i -X GET http://localhost:8080/tasks
 	json.NewEncoder(w).Encode(tasks)
+	fmt.Println("Read")
 }
 
 func updateTask(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +93,7 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 			found = true
 			tasks[index].Info = reqTask.Info
 			tasks[index].Done = reqTask.Done
+			fmt.Println("Updated")
 		}
 	}
 
@@ -107,6 +115,7 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 		if task.ID == deleteTaskID {
 			found = true
 			tasks = append(tasks[:index], tasks[index+1:]...)
+			fmt.Println("Deleted")
 		}
 	}
 
