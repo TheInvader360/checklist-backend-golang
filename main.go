@@ -63,6 +63,7 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, reqTask)
 		w.WriteHeader(http.StatusCreated)
 		fmt.Println("Created")
+		json.NewEncoder(w).Encode(reqTask)
 	}
 }
 
