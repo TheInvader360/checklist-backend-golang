@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -29,7 +30,10 @@ func main() {
 	router.HandleFunc("/tasks", readTasks).Methods("GET")
 	router.HandleFunc("/tasks/{id}", updateTask).Methods("PUT")
 	router.HandleFunc("/tasks/{id}", deleteTask).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	headers := handlers.AllowedHeaders([]string{"Content-Type"})
+	methods := handlers.AllowedMethods([]string{"POST", "GET", "PUT", "DELETE"})
+	origins := handlers.AllowedOrigins([]string{"*"})
+	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(headers, methods, origins)(router)))
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
