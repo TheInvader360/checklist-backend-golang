@@ -22,20 +22,26 @@ var tasks []task
 var nextTaskID int
 
 func main() {
-	tasks = append(tasks, task{1001, "Eat", false})
-	tasks = append(tasks, task{1002, "Sleep", false})
-	tasks = append(tasks, task{1003, "Rave", false})
-	nextTaskID = 1004
-
+	bootstrapData()
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/task", createTask).Methods("POST")
 	router.HandleFunc("/tasks", readTasks).Methods("GET")
+	router.HandleFunc("/tasks/{id}", readTask).Methods("GET")
 	router.HandleFunc("/tasks/{id}", updateTask).Methods("PUT")
 	router.HandleFunc("/tasks/{id}", deleteTask).Methods("DELETE")
 	headers := handlers.AllowedHeaders([]string{"Content-Type"})
 	methods := handlers.AllowedMethods([]string{"POST", "GET", "PUT", "DELETE"})
 	origins := handlers.AllowedOrigins([]string{"*"})
+	log.Println("Starting up on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(headers, methods, origins)(router)))
+}
+
+func bootstrapData() {
+	tasks = nil
+	tasks = append(tasks, task{1001, "Eat", true})
+	tasks = append(tasks, task{1002, "Sleep", false})
+	tasks = append(tasks, task{1003, "Rave", false})
+	nextTaskID = 1004
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +68,7 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 	} else {
 		tasks = append(tasks, reqTask)
 		w.WriteHeader(http.StatusCreated)
-		fmt.Println("Created")
+		log.Println("createTask", reqTask)
 		json.NewEncoder(w).Encode(reqTask)
 	}
 }
@@ -70,7 +76,29 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 func readTasks(w http.ResponseWriter, r *http.Request) {
 	//curl -i -X GET http://localhost:8080/tasks
 	json.NewEncoder(w).Encode(tasks)
-	fmt.Println("Read")
+	log.Println("readTasks", tasks)
+}
+
+func readTask(w http.ResponseWriter, r *http.Request) {
+	//curl -i -X GET http://localhost:8080/tasks/1001
+	readTaskID, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	found := false
+
+	for _, task := range tasks {
+		if task.ID == readTaskID {
+			found = true
+			log.Println("readTask", task)
+			json.NewEncoder(w).Encode(task)
+		}
+	}
+
+	if !found {
+		w.WriteHeader(http.StatusNotFound)
+	}
 }
 
 func updateTask(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +122,7 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 			found = true
 			tasks[index].Info = reqTask.Info
 			tasks[index].Done = reqTask.Done
-			fmt.Println("Updated")
+			log.Println("updateTask", task, tasks[index])
 		}
 	}
 
@@ -116,7 +144,7 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 		if task.ID == deleteTaskID {
 			found = true
 			tasks = append(tasks[:index], tasks[index+1:]...)
-			fmt.Println("Deleted")
+			log.Println("deleteTask", task)
 		}
 	}
 
